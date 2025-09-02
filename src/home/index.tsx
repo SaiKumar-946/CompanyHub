@@ -14,7 +14,24 @@ import {
 } from 'react-native';
 
 const API_BASE_URL = 'http://localhost:3000/api'; // change if needed
-const PRIMARY = '#FF9800';
+const COLORS = {
+  primary: '#FF9800',
+  primaryDark: '#1D4ED8',
+  success: '#059669',
+  warning: '#D97706',
+  danger: '#DC2626',
+  gray50: '#F9FAFB',
+  gray100: '#F3F4F6',
+  gray200: '#E5E7EB',
+  gray300: '#D1D5DB',
+  gray400: '#9CA3AF',
+  gray500: '#6B7280',
+  gray600: '#4B5563',
+  gray700: '#374151',
+  gray800: '#1F2937',
+  gray900: '#111827',
+  white: '#FFFFFF',
+};
 
 export default function Home() {
   const [companies, setCompanies] = useState([]);
@@ -202,8 +219,8 @@ export default function Home() {
 
   const handleDelete = id => {
     Alert.alert(
-      'Confirm delete',
-      'Are you sure you want to delete this company?',
+      'Confirm Delete',
+      'Are you sure you want to delete this company? This action cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -214,7 +231,7 @@ export default function Home() {
               const { ok, data } = await deleteCompany(id);
               if (ok) {
                 setCompanies(prev => prev.filter(c => c._id !== id));
-                Alert.alert('Deleted', 'Company removed');
+                Alert.alert('Success', 'Company deleted successfully');
               } else {
                 Alert.alert('Error', data.error || 'Delete failed');
               }
@@ -232,95 +249,125 @@ export default function Home() {
   const renderCompanyItem = ({ item }) => (
     <View style={styles.companyCard}>
       <View style={styles.companyHeader}>
-        <View style={{ flex: 1 }}>
+        <View style={styles.companyInfo}>
           <Text style={styles.companyName}>{item.name}</Text>
-          {item.industry ? (
+          {item.industry && (
             <Text style={styles.companyIndustry}>{item.industry}</Text>
-          ) : null}
-          {item.location ? (
-            <Text style={styles.companyLocation}>📍 {item.location}</Text>
-          ) : null}
+          )}
+          {item.location && (
+            <View style={styles.locationContainer}>
+              <Text style={styles.locationIcon}>📍</Text>
+              <Text style={styles.companyLocation}>{item.location}</Text>
+            </View>
+          )}
         </View>
 
-        <View style={{ alignItems: 'flex-end' }}>
+        <View style={styles.companyActions}>
           <View
             style={[
               styles.statusBadge,
-              { backgroundColor: statusColor(item.status) },
+              { backgroundColor: getStatusColor(item.status) },
             ]}
           >
             <Text style={styles.statusText}>
               {(item.status || 'unknown').toUpperCase()}
             </Text>
           </View>
-
-          <View style={{ height: 8 }} />
-
-          <TouchableOpacity
-            style={styles.smallBtn}
-            onPress={() => openEditModal(item)}
-          >
-            <Text style={styles.smallBtnText}>Edit</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.smallBtn,
-              {
-                marginTop: 6,
-                backgroundColor: '#fff',
-                borderWidth: 1,
-                borderColor: '#eee',
-              },
-            ]}
-            onPress={() => handleDelete(item._id)}
-          >
-            <Text style={[styles.smallBtnText, { color: '#c62828' }]}>
-              Delete
-            </Text>
-          </TouchableOpacity>
         </View>
       </View>
 
-      <View style={styles.companyStats}>
-        {item.employees ? (
-          <Text style={styles.statText}>👥 {item.employees} employees</Text>
-        ) : null}
-        {item.founded ? (
-          <Text style={styles.statText}>📅 Founded {item.founded}</Text>
-        ) : null}
+      <View style={styles.companyMetrics}>
+        {item.employees && (
+          <View style={styles.metricItem}>
+            <Text style={styles.metricIcon}>👥</Text>
+            <Text style={styles.metricText}>
+              {item.employees.toLocaleString()} employees
+            </Text>
+          </View>
+        )}
+        {item.founded && (
+          <View style={styles.metricItem}>
+            <Text style={styles.metricIcon}>📅</Text>
+            <Text style={styles.metricText}>Founded {item.founded}</Text>
+          </View>
+        )}
       </View>
 
-      {item.website ? (
-        <Text style={styles.website}>🌐 {item.website}</Text>
-      ) : null}
-      {item.description ? (
+      {item.website && (
+        <View style={styles.websiteContainer}>
+          <Text style={styles.websiteIcon}>🌐</Text>
+          <Text style={styles.websiteText}>{item.website}</Text>
+        </View>
+      )}
+
+      {item.description && (
         <Text style={styles.description} numberOfLines={2}>
           {item.description}
         </Text>
-      ) : null}
+      )}
+
+      <View style={styles.actionButtons}>
+        <TouchableOpacity
+          style={styles.editButton}
+          onPress={() => openEditModal(item)}
+        >
+          <Text style={styles.editButtonText}>Edit</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={() => handleDelete(item._id)}
+        >
+          <Text style={styles.deleteButtonText}>Delete</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
   // status color helper
-  const statusColor = status => {
+  const getStatusColor = status => {
     switch (status) {
       case 'active':
-        return PRIMARY;
+        return COLORS.success;
       case 'inactive':
-        return '#c62828';
+        return COLORS.danger;
       case 'pending':
-        return '#ffb74d';
+        return COLORS.warning;
       default:
-        return '#9E9E9E';
+        return COLORS.gray400;
     }
   };
+
+  const getFormFields = () => [
+    { key: 'name', placeholder: 'Company Name', required: true },
+    { key: 'industry', placeholder: 'Industry' },
+    { key: 'location', placeholder: 'Location' },
+    {
+      key: 'employees',
+      placeholder: 'Number of Employees',
+      keyboardType: 'numeric',
+    },
+    {
+      key: 'founded',
+      placeholder: 'Founded Year',
+      keyboardType: 'numeric',
+    },
+    { key: 'website', placeholder: 'Website URL' },
+    {
+      key: 'description',
+      placeholder: 'Company Description',
+      multiline: true,
+    },
+  ];
 
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>CompanyHub</Text>
+        <View>
+          <Text style={styles.title}>CompanyHub</Text>
+          <Text style={styles.subtitle}>Manage your company directory</Text>
+        </View>
         <TouchableOpacity style={styles.addButton} onPress={openCreateModal}>
           <Text style={styles.addButtonText}>+ Add Company</Text>
         </TouchableOpacity>
@@ -329,7 +376,7 @@ export default function Home() {
       {/* Content */}
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={PRIMARY} />
+          <ActivityIndicator size="large" color={COLORS.primary} />
           <Text style={styles.loadingText}>Loading companies...</Text>
         </View>
       ) : (
@@ -342,24 +389,27 @@ export default function Home() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={[PRIMARY]}
+              colors={[COLORS.primary]}
+              tintColor={COLORS.primary}
             />
           }
           onEndReached={loadMore}
           onEndReachedThreshold={0.1}
+          showsVerticalScrollIndicator={false}
           ListFooterComponent={() =>
             loadingMore ? (
               <View style={styles.loadingMore}>
-                <ActivityIndicator size="small" color={PRIMARY} />
-                <Text style={{ marginLeft: 8 }}>Loading more...</Text>
+                <ActivityIndicator size="small" color={COLORS.primary} />
+                <Text style={styles.loadingMoreText}>Loading more...</Text>
               </View>
             ) : null
           }
           ListEmptyComponent={() => (
             <View style={styles.emptyContainer}>
+              <Text style={styles.emptyIcon}>🏢</Text>
               <Text style={styles.emptyText}>No companies found</Text>
               <Text style={styles.emptySubtext}>
-                Add your first company to get started!
+                Add your first company to get started
               </Text>
             </View>
           )}
@@ -379,59 +429,76 @@ export default function Home() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                {isEditing ? 'Edit Company' : 'Add New Company'}
-              </Text>
+              <View>
+                <Text style={styles.modalTitle}>
+                  {isEditing ? 'Edit Company' : 'Add New Company'}
+                </Text>
+                <Text style={styles.modalSubtitle}>
+                  {isEditing
+                    ? 'Update company information'
+                    : 'Enter company details below'}
+                </Text>
+              </View>
               <TouchableOpacity
+                style={styles.closeButton}
                 onPress={() => {
                   setModalVisible(false);
                   resetForm();
                 }}
               >
-                <Text style={styles.closeButton}>✕</Text>
+                <Text style={styles.closeButtonText}>✕</Text>
               </TouchableOpacity>
             </View>
 
             <FlatList
-              data={[
-                { key: 'name', placeholder: 'Company Name *', required: true },
-                { key: 'industry', placeholder: 'Industry' },
-                { key: 'location', placeholder: 'Location' },
-                {
-                  key: 'employees',
-                  placeholder: 'Number of Employees',
-                  keyboardType: 'numeric',
-                },
-                {
-                  key: 'founded',
-                  placeholder: 'Founded Year',
-                  keyboardType: 'numeric',
-                },
-                { key: 'website', placeholder: 'Website URL' },
-                {
-                  key: 'description',
-                  placeholder: 'Description',
-                  multiline: true,
-                },
-              ]}
+              data={getFormFields()}
               renderItem={({ item }) => (
-                <TextInput
-                  style={[styles.input, item.multiline && styles.textArea]}
-                  placeholder={item.placeholder}
-                  value={formData[item.key]}
-                  onChangeText={text =>
-                    setFormData(prev => ({ ...prev, [item.key]: text }))
-                  }
-                  keyboardType={item.keyboardType || 'default'}
-                  multiline={item.multiline}
-                  numberOfLines={item.multiline ? 3 : 1}
-                />
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputLabel}>
+                    {item.placeholder}
+                    {item.required && (
+                      <Text style={styles.requiredMark}> *</Text>
+                    )}
+                  </Text>
+                  <TextInput
+                    style={[styles.input, item.multiline && styles.textArea]}
+                    placeholder={`Enter ${item.placeholder.toLowerCase()}`}
+                    value={formData[item.key]}
+                    onChangeText={text =>
+                      setFormData(prev => ({ ...prev, [item.key]: text }))
+                    }
+                    keyboardType={item.keyboardType || 'default'}
+                    multiline={item.multiline}
+                    numberOfLines={item.multiline ? 4 : 1}
+                    placeholderTextColor={COLORS.gray400}
+                  />
+                </View>
               )}
               keyExtractor={item => item.key}
               showsVerticalScrollIndicator={false}
+              style={styles.formContainer}
             />
 
-            <View style={styles.modalButtons}>
+            {isEditing && (
+              <View style={styles.statusToggleContainer}>
+                <Text style={styles.statusToggleLabel}>Status:</Text>
+                <TouchableOpacity
+                  style={styles.statusToggleButton}
+                  onPress={() => {
+                    setFormData(prev => ({
+                      ...prev,
+                      status: prev.status === 'active' ? 'inactive' : 'active',
+                    }));
+                  }}
+                >
+                  <Text style={styles.statusToggleText}>
+                    {formData.status === 'active' ? 'Active' : 'Inactive'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            <View style={styles.modalActions}>
               <TouchableOpacity
                 style={styles.cancelButton}
                 onPress={() => {
@@ -451,22 +518,6 @@ export default function Home() {
                 </Text>
               </TouchableOpacity>
             </View>
-
-            {isEditing && (
-              <TouchableOpacity
-                style={{ marginTop: 10, alignSelf: 'center' }}
-                onPress={() => {
-                  setFormData(prev => ({
-                    ...prev,
-                    status: prev.status === 'active' ? 'inactive' : 'active',
-                  }));
-                }}
-              >
-                <Text style={{ color: '#007AFF' }}>
-                  Toggle status (current: {formData.status})
-                </Text>
-              </TouchableOpacity>
-            )}
           </View>
         </View>
       </Modal>
@@ -476,154 +527,399 @@ export default function Home() {
 
 // --- styles
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.gray50,
+  },
+
+  // Header
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    backgroundColor: '#fff',
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    backgroundColor: COLORS.white,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  title: { fontSize: 22, fontWeight: '700', color: '#222' },
-  addButton: {
-    backgroundColor: PRIMARY,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  addButtonText: { color: '#fff', fontWeight: '700' },
-
-  listContainer: { padding: 15 },
-
-  companyCard: {
-    backgroundColor: '#fff',
-    padding: 14,
-    marginBottom: 12,
-    borderRadius: 12,
+    borderBottomColor: COLORS.gray200,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
     elevation: 2,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: COLORS.gray900,
+    letterSpacing: -0.5,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: COLORS.gray500,
+    marginTop: 2,
+  },
+  addButton: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  addButtonText: {
+    color: COLORS.white,
+    fontWeight: '600',
+    fontSize: 16,
+  },
+
+  // List
+  listContainer: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+
+  // Company Card
+  companyCard: {
+    backgroundColor: COLORS.white,
+    padding: 20,
+    marginBottom: 16,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: COLORS.gray100,
   },
   companyHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+    marginBottom: 16,
   },
-  companyName: { fontSize: 18, fontWeight: '700', color: '#222' },
-  companyIndustry: { marginTop: 6, color: '#666' },
-  companyLocation: { marginTop: 6, color: '#666' },
+  companyInfo: {
+    flex: 1,
+    marginRight: 16,
+  },
+  companyName: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: COLORS.gray900,
+    lineHeight: 26,
+  },
+  companyIndustry: {
+    marginTop: 4,
+    color: COLORS.gray600,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  locationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  locationIcon: {
+    fontSize: 12,
+    marginRight: 4,
+  },
+  companyLocation: {
+    color: COLORS.gray500,
+    fontSize: 14,
+  },
+  companyActions: {
+    alignItems: 'flex-end',
+  },
 
+  // Status Badge
   statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    minWidth: 72,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    minWidth: 80,
     alignItems: 'center',
   },
-  statusText: { color: '#fff', fontSize: 11, fontWeight: '700' },
-
-  smallBtn: {
-    marginTop: 6,
-    backgroundColor: PRIMARY,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
+  statusText: {
+    color: COLORS.white,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
-  smallBtnText: { color: '#fff', fontWeight: '700' },
 
-  companyStats: {
+  // Metrics
+  companyMetrics: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10,
+    marginBottom: 12,
+    gap: 16,
   },
-  statText: { fontSize: 13, color: '#888' },
+  metricItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  metricIcon: {
+    fontSize: 14,
+    marginRight: 6,
+  },
+  metricText: {
+    fontSize: 14,
+    color: COLORS.gray600,
+    fontWeight: '500',
+  },
 
-  website: { marginTop: 8, color: PRIMARY, fontSize: 13 },
-  description: { marginTop: 6, color: '#666', lineHeight: 20 },
+  // Website
+  websiteContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  websiteIcon: {
+    fontSize: 14,
+    marginRight: 6,
+  },
+  websiteText: {
+    color: COLORS.primary,
+    fontSize: 14,
+    fontWeight: '500',
+  },
 
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { marginTop: 10, color: '#666' },
+  // Description
+  description: {
+    marginBottom: 16,
+    color: COLORS.gray600,
+    lineHeight: 22,
+    fontSize: 14,
+  },
+
+  // Action Buttons
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 4,
+  },
+  editButton: {
+    flex: 1,
+    backgroundColor: COLORS.primary,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  editButtonText: {
+    color: COLORS.white,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  deleteButton: {
+    flex: 1,
+    backgroundColor: COLORS.white,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.danger,
+  },
+  deleteButtonText: {
+    color: COLORS.danger,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+
+  // Loading States
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.gray50,
+  },
+  loadingText: {
+    marginTop: 16,
+    color: COLORS.gray600,
+    fontSize: 16,
+    fontWeight: '500',
+  },
   loadingMore: {
-    paddingVertical: 16,
+    paddingVertical: 20,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
   },
+  loadingMoreText: {
+    marginLeft: 8,
+    color: COLORS.gray600,
+    fontSize: 14,
+  },
 
+  // Empty State
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 50,
+    paddingVertical: 80,
+  },
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: 16,
   },
   emptyText: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
-    color: '#666',
-    marginBottom: 5,
+    color: COLORS.gray700,
+    marginBottom: 8,
   },
-  emptySubtext: { fontSize: 14, color: '#999' },
+  emptySubtext: {
+    fontSize: 16,
+    color: COLORS.gray500,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
 
   // Modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalContainer: {
     width: '92%',
-    maxHeight: '86%',
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    padding: 16,
+    maxHeight: '90%',
+    backgroundColor: COLORS.white,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
+    alignItems: 'flex-start',
+    padding: 24,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.gray100,
   },
-  modalTitle: { fontSize: 18, fontWeight: '800', color: '#222' },
-  closeButton: { fontSize: 20, color: '#666' },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: COLORS.gray900,
+    lineHeight: 28,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: COLORS.gray500,
+    marginTop: 4,
+  },
+  closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: COLORS.gray100,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  closeButtonText: {
+    fontSize: 16,
+    color: COLORS.gray600,
+    fontWeight: '600',
+  },
 
+  // Form
+  formContainer: {
+    paddingHorizontal: 24,
+    paddingVertical: 8,
+  },
+  inputContainer: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.gray700,
+    marginBottom: 8,
+  },
+  requiredMark: {
+    color: COLORS.danger,
+  },
   input: {
     borderWidth: 1,
-    borderColor: '#eee',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: '#fafafa',
-    marginBottom: 12,
+    borderColor: COLORS.gray200,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: COLORS.white,
     fontSize: 16,
+    color: COLORS.gray900,
   },
-  textArea: { height: 90, textAlignVertical: 'top' },
+  textArea: {
+    height: 100,
+    textAlignVertical: 'top',
+    paddingTop: 14,
+  },
 
-  modalButtons: {
+  // Status Toggle
+  statusToggleContainer: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 6,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.gray100,
+  },
+  statusToggleLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.gray700,
+  },
+  statusToggleButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  statusToggleText: {
+    fontWeight: '600',
+    fontSize: 14,
+  },
+
+  // Modal Actions
+  modalActions: {
+    flexDirection: 'row',
+    padding: 24,
+    paddingTop: 16,
+    gap: 12,
   },
   cancelButton: {
     flex: 1,
-    backgroundColor: '#f0f0f0',
-    paddingVertical: 12,
-    borderRadius: 10,
+    backgroundColor: COLORS.gray100,
+    paddingVertical: 16,
+    borderRadius: 12,
     alignItems: 'center',
-    marginRight: 8,
   },
-  cancelButtonText: { color: '#666', fontSize: 16, fontWeight: '700' },
+  cancelButtonText: {
+    color: COLORS.gray700,
+    fontSize: 16,
+    fontWeight: '600',
+  },
   submitButton: {
     flex: 1,
-    backgroundColor: PRIMARY,
-    paddingVertical: 12,
-    borderRadius: 10,
+    backgroundColor: COLORS.primary,
+    paddingVertical: 16,
+    borderRadius: 12,
     alignItems: 'center',
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  submitButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  submitButtonText: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });
