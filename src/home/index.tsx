@@ -12,10 +12,11 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
+import CompanyFilters from './filters';
 
 const API_BASE_URL = 'http://localhost:3000/api'; // change if needed
 const COLORS = {
-  primary: '#FF9800',
+  primary: '#e6a356ff',
   primaryDark: '#1D4ED8',
   success: '#059669',
   warning: '#D97706',
@@ -44,6 +45,19 @@ export default function Home() {
   const [totalPages, setTotalPages] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
 
+  // Filter state
+  const [filters, setFilters] = useState({
+    search: '',
+    industry: '',
+    location: '',
+    status: '',
+    employees_min: '',
+    employees_max: '',
+    founded_after: '',
+    founded_before: '',
+  });
+  const [showFilters, setShowFilters] = useState(false);
+
   // Form state (used for both create and edit)
   const [formData, setFormData] = useState({
     name: '',
@@ -57,14 +71,35 @@ export default function Home() {
   });
 
   // --- API helpers ---
-  const fetchCompanies = async (page = 1, limit = 10, refresh = false) => {
+  const fetchCompanies = async (
+    page = 1,
+    limit = 10,
+    refresh = false,
+    customFilters = null,
+  ) => {
     try {
       if (refresh) setRefreshing(true);
       else if (page === 1) setLoading(true);
       else setLoadingMore(true);
 
+      // Build query params
+      const queryParams = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+      });
+
+      // Use custom filters or current filters
+      const activeFilters = customFilters || filters;
+
+      // Add filter params if they have values
+      Object.entries(activeFilters).forEach(([key, value]) => {
+        if (value && value.toString().trim()) {
+          queryParams.append(key, value.toString().trim());
+        }
+      });
+
       const res = await fetch(
-        `${API_BASE_URL}/companies?page=${page}&limit=${limit}`,
+        `${API_BASE_URL}/companies?${queryParams.toString()}`,
       );
       const data = await res.json();
 
@@ -126,6 +161,32 @@ export default function Home() {
     if (currentPage < totalPages && !loadingMore) {
       fetchCompanies(currentPage + 1);
     }
+  };
+
+  // --- filter handlers ---
+  const handleFilterChange = (key, value) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const applyFilters = () => {
+    setCurrentPage(1);
+    fetchCompanies(1, 10, false, filters);
+  };
+
+  const clearFilters = () => {
+    const clearedFilters = {
+      search: '',
+      industry: '',
+      location: '',
+      status: '',
+      employees_min: '',
+      employees_max: '',
+      founded_after: '',
+      founded_before: '',
+    };
+    setFilters(clearedFilters);
+    setCurrentPage(1);
+    fetchCompanies(1, 10, false, clearedFilters);
   };
 
   // --- form helpers ---
@@ -368,10 +429,29 @@ export default function Home() {
           <Text style={styles.title}>CompanyHub</Text>
           <Text style={styles.subtitle}>Manage your company directory</Text>
         </View>
-        <TouchableOpacity style={styles.addButton} onPress={openCreateModal}>
-          <Text style={styles.addButtonText}>+ Add Company</Text>
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity style={styles.addButton} onPress={openCreateModal}>
+            <Text style={styles.addButtonText}>Add New</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.filterButton}
+            onPress={() => setShowFilters(!showFilters)}
+          >
+            <Text style={styles.filterButtonText}>
+              {showFilters ? 'Hide Filters' : 'Show Filters'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
+
+      {/* Filters Component */}
+      <CompanyFilters
+        filters={filters}
+        showFilters={showFilters}
+        onFilterChange={handleFilterChange}
+        onApplyFilters={applyFilters}
+        onClearFilters={clearFilters}
+      />
 
       {/* Content */}
       {loading ? (
@@ -525,7 +605,7 @@ export default function Home() {
   );
 }
 
-// --- styles
+// --- styles (filter styles removed, kept the rest) ---
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -558,6 +638,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.gray500,
     marginTop: 2,
+  },
+  headerActions: {
+    gap: 12,
+  },
+  filterButton: {
+    backgroundColor: COLORS.gray100,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.gray200,
+  },
+  filterButtonText: {
+    color: COLORS.gray700,
+    fontWeight: '600',
+    fontSize: 14,
   },
   addButton: {
     backgroundColor: COLORS.primary,
@@ -880,8 +976,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
+    backgroundColor: COLORS.success, // This will be dynamic based on status
   },
   statusToggleText: {
+    color: COLORS.white,
     fontWeight: '600',
     fontSize: 14,
   },
