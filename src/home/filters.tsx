@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
+  Modal,
+  FlatList,
+  Pressable,
 } from 'react-native';
 
 const COLORS = {
@@ -26,6 +29,13 @@ const COLORS = {
   white: '#FFFFFF',
 };
 
+const statusOptions = [
+  { value: '', label: 'All Statuses' },
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
+  { value: 'pending', label: 'Pending' },
+];
+
 export default function CompanyFilters({
   filters,
   onFilterChange,
@@ -33,9 +43,43 @@ export default function CompanyFilters({
   onClearFilters,
   showFilters,
 }) {
+  const [showStatusModal, setShowStatusModal] = useState(false);
+
   const updateFilter = (key, value) => {
     onFilterChange(key, value);
   };
+
+  const handleStatusSelect = (status) => {
+    updateFilter('status', status);
+    setShowStatusModal(false);
+  };
+
+  const getStatusLabel = () => {
+    const option = statusOptions.find(opt => opt.value === filters.status);
+    return option ? option.label : 'All Statuses';
+  };
+
+  const renderStatusOption = ({ item }) => (
+    <TouchableOpacity
+      style={[
+        styles.statusOption,
+        filters.status === item.value && styles.statusOptionSelected
+      ]}
+      onPress={() => handleStatusSelect(item.value)}
+    >
+      <Text style={[
+        styles.statusOptionText,
+        filters.status === item.value && styles.statusOptionTextSelected
+      ]}>
+        {item.label}
+      </Text>
+      {filters.status === item.value && (
+        <View style={styles.checkmark}>
+          <Text style={styles.checkmarkText}>✓</Text>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
 
   if (!showFilters) {
     return null;
@@ -78,29 +122,17 @@ export default function CompanyFilters({
         </View>
       </View>
 
-      {/* Status Filter */}
+      {/* Status Dropdown */}
       <View style={styles.filterRow}>
         <View style={styles.filterInputFull}>
           <Text style={styles.filterLabel}>Status</Text>
-          <View style={styles.statusFilterContainer}>
-            {['', 'active', 'inactive', 'pending'].map(status => (
-              <TouchableOpacity
-                key={status}
-                style={[
-                  styles.statusFilterChip,
-                  filters.status === status && styles.statusFilterChipActive
-                ]}
-                onPress={() => updateFilter('status', status)}
-              >
-                <Text style={[
-                  styles.statusFilterChipText,
-                  filters.status === status && styles.statusFilterChipTextActive
-                ]}>
-                  {status || 'All'}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <TouchableOpacity
+            style={styles.dropdownButton}
+            onPress={() => setShowStatusModal(true)}
+          >
+            <Text style={styles.dropdownButtonText}>{getStatusLabel()}</Text>
+            <Text style={styles.dropdownArrow}>▼</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -161,6 +193,41 @@ export default function CompanyFilters({
           <Text style={styles.applyFiltersText}>Apply Filters</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Status Selection Modal */}
+      <Modal
+        visible={showStatusModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowStatusModal(false)}
+      >
+        <Pressable 
+          style={styles.modalOverlay}
+          onPress={() => setShowStatusModal(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Status</Text>
+                <TouchableOpacity
+                  style={styles.closeButton}
+                  onPress={() => setShowStatusModal(false)}
+                >
+                  <Text style={styles.closeButtonText}>×</Text>
+                </TouchableOpacity>
+              </View>
+              
+              <FlatList
+                data={statusOptions}
+                renderItem={renderStatusOption}
+                keyExtractor={(item) => item.value}
+                showsVerticalScrollIndicator={false}
+                style={styles.optionsList}
+              />
+            </View>
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -216,31 +283,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.gray900,
   },
-  statusFilterContainer: {
+  dropdownButton: {
     flexDirection: 'row',
-    gap: 8,
-    flexWrap: 'wrap',
-  },
-  statusFilterChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: COLORS.gray100,
+    alignItems: 'center',
+    justifyContent: 'space-between',
     borderWidth: 1,
     borderColor: COLORS.gray200,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: COLORS.gray50,
+    minHeight: 42,
   },
-  statusFilterChipActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  statusFilterChipText: {
-    fontSize: 13,
+  dropdownButtonText: {
+    fontSize: 14,
+    color: COLORS.gray700,
     fontWeight: '500',
-    color: COLORS.gray600,
-    textTransform: 'capitalize',
   },
-  statusFilterChipTextActive: {
-    color: COLORS.white,
+  dropdownArrow: {
+    fontSize: 12,
+    color: COLORS.gray500,
+    marginLeft: 8,
   },
   rangeInputContainer: {
     flexDirection: 'row',
@@ -299,5 +362,94 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontSize: 14,
     fontWeight: '600',
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContainer: {
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: COLORS.white,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 20,
+    maxHeight: '100%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.gray200,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.gray900,
+  },
+  closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: COLORS.gray100,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeButtonText: {
+    fontSize: 20,
+    color: COLORS.gray600,
+    fontWeight: '300',
+  },
+  optionsList: {
+    paddingHorizontal: 20,
+  },
+  statusOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    marginVertical: 4,
+    borderRadius: 12,
+    backgroundColor: COLORS.gray50,
+    borderWidth: 1,
+    borderColor: COLORS.gray200,
+  },
+  statusOptionSelected: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  statusOptionText: {
+    fontSize: 16,
+    color: COLORS.gray700,
+    fontWeight: '500',
+  },
+  statusOptionTextSelected: {
+    color: COLORS.white,
+    fontWeight: '600',
+  },
+  checkmark: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: COLORS.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkmarkText: {
+    color: COLORS.primary,
+    fontSize: 12,
+    fontWeight: 'bold',
   },
 });
